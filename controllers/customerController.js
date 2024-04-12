@@ -13,7 +13,6 @@ const redis = new Redis(redisUri, {
   connectTimeout: 10000,
   retryDelayOnFailover: 100,
   enableAutoPipelining: true,
-  lazyConnect: true, // Retry delay in milliseconds on failover error
 });
 
 //@desc Get All Vendors
@@ -55,6 +54,7 @@ exports.getVendors = asyncHandler(async (req, res) => {
     )}:${page}:${pageSize}`;
     const cachedVendors = await redis.get(cacheKey);
     if (cachedVendors) {
+      console.log("cachedVendors");
       return res.status(200).json(JSON.parse(cachedVendors));
     }
 
@@ -63,14 +63,18 @@ exports.getVendors = asyncHandler(async (req, res) => {
       .skip((page - 1) * pageSize)
       .limit(pageSize);
 
-    await redis.set(cacheKey, JSON.stringify(vendors), "EX", 3600); // Cache for 1 hour
+    await redis.set(cacheKey, JSON.stringify(vendors), "EX", 3600);
+    setTimeout(async () => {
+      const isExpired = await redis.ttl(cacheKey);
+      if (isExpired === -2) {
+        // Key has expired, delete it
+        await redis.del(cacheKey);
+      }
+    }, 3600000);
 
     return res.status(200).json(vendors);
   } catch (err) {
     return res.status(500).json({ error: "Internal Server Error" });
-  } finally {
-    // Disconnect from Redis after operation
-    redis.disconnect();
   }
 });
 
@@ -107,7 +111,14 @@ exports.getVendorById = asyncHandler(async (req, res, next) => {
 
     // If vendor details found, store them in the cache for future use
     if (menu) {
-      await redis.set(`vendor:${vendor_id}`, JSON.stringify(menu));
+      await redis.set(`vendor:${vendor_id}`, JSON.stringify(menu), "EX", 3600);
+      setTimeout(async () => {
+        const isExpired = await redis.ttl(cacheKey);
+        if (isExpired === -2) {
+          // Key has expired, delete it
+          await redis.del(cacheKey);
+        }
+      }, 3600000);
     } else {
       // If vendor doesn't exist, return an error
       return res.status(404).json({ error: "Vendor not found" });
@@ -117,9 +128,6 @@ exports.getVendorById = asyncHandler(async (req, res, next) => {
     return res.status(200).json(menu);
   } catch (err) {
     return res.status(500).json({ error: "Internal Server Error" });
-  } finally {
-    // Disconnect from Redis after operation
-    redis.disconnect();
   }
 });
 
@@ -138,6 +146,13 @@ exports.getVendorDetailsById = asyncHandler(async (req, res, next) => {
 
     if (v_details) {
       await redis.set(cacheKey, JSON.stringify(v_details), "EX", 3600); // Cache for 1 hour
+      setTimeout(async () => {
+        const isExpired = await redis.ttl(cacheKey);
+        if (isExpired === -2) {
+          // Key has expired, delete it
+          await redis.del(cacheKey);
+        }
+      }, 3600000);
     } else {
       return res.status(404).json({ error: "Vendor not found" });
     }
@@ -145,8 +160,6 @@ exports.getVendorDetailsById = asyncHandler(async (req, res, next) => {
     return res.status(200).json(v_details);
   } catch (err) {
     return res.status(500).json({ error: "Internal Server Error" });
-  } finally {
-    redis.disconnect();
   }
 });
 
@@ -166,6 +179,13 @@ const getRestaurantDetails = asyncHandler(async (req, res) => {
   }
 
   await redis.set(cacheKey, JSON.stringify(restaurant), "EX", 3600); // Cache for 1 hour
+  setTimeout(async () => {
+    const isExpired = await redis.ttl(cacheKey);
+    if (isExpired === -2) {
+      // Key has expired, delete it
+      await redis.del(cacheKey);
+    }
+  }, 3600000);
 
   res.status(200).json(restaurant);
 });
@@ -227,9 +247,6 @@ exports.getCartPrice = asyncHandler(async (req, res) => {
     return res.json({ totalPrice });
   } catch (error) {
     return res.status(500).json({ error: error.message });
-  } finally {
-    // Disconnect from Redis after operation
-    redis.disconnect();
   }
 });
 
@@ -286,13 +303,17 @@ exports.searchRestaurants = asyncHandler(async (req, res) => {
     });
 
     await redis.set(cacheKey, JSON.stringify(restaurants), "EX", 3600); // Cache for 1 hour
+    setTimeout(async () => {
+      const isExpired = await redis.ttl(cacheKey);
+      if (isExpired === -2) {
+        // Key has expired, delete it
+        await redis.del(cacheKey);
+      }
+    }, 3600000);
 
     return res.status(200).json(restaurants);
   } catch (error) {
     return res.status(500).json({ error: "Internal Server Error" });
-  } finally {
-    // Disconnect from Redis after operation
-    redis.disconnect();
   }
 });
 
@@ -319,13 +340,17 @@ exports.searchMenuItems = asyncHandler(async (req, res) => {
     });
 
     await redis.set(cacheKey, JSON.stringify(menuItems), "EX", 3600); // Cache for 1 hour
+    setTimeout(async () => {
+      const isExpired = await redis.ttl(cacheKey);
+      if (isExpired === -2) {
+        // Key has expired, delete it
+        await redis.del(cacheKey);
+      }
+    }, 3600000);
 
     return res.status(200).json(menuItems);
   } catch (error) {
     return res.status(500).json({ error: "Internal Server Error" });
-  } finally {
-    // Disconnect from Redis after operation
-    redis.disconnect();
   }
 });
 exports.getOfferItems = asyncHandler(async (req, res) => {
@@ -340,12 +365,17 @@ exports.getOfferItems = asyncHandler(async (req, res) => {
     const menuItems = await MenuItem.find({ on_offer: true });
 
     await redis.set(cacheKey, JSON.stringify(menuItems), "EX", 3600); // Cache for 1 hour
+    setTimeout(async () => {
+      const isExpired = await redis.ttl(cacheKey);
+      if (isExpired === -2) {
+        // Key has expired, delete it
+        await redis.del(cacheKey);
+      }
+    }, 3600000);
 
     return res.json({ menuItems });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Internal Server Error" });
-  } finally {
-    redis.disconnect();
   }
 });
