@@ -11,6 +11,7 @@ const redis = new Redis(redisUri, {
   enableOfflineQueue: false,
   legacyMode: true,
   connectTimeout: 10000,
+  retryDelayOnFailover: 100, // Retry delay in milliseconds on failover error
 });
 
 //@desc Get All Vendors
