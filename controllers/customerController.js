@@ -8,10 +8,12 @@ require("dotenv").config();
 const Redis = require("ioredis");
 const redisUri = process.env.REDIS_URI;
 const redis = new Redis(redisUri, {
-  enableOfflineQueue: false,
+  enableOfflineQueue: true,
   legacyMode: true,
   connectTimeout: 10000,
-  retryDelayOnFailover: 100, // Retry delay in milliseconds on failover error
+  retryDelayOnFailover: 100,
+  enableAutoPipelining: true,
+  lazyConnect: true, // Retry delay in milliseconds on failover error
 });
 
 //@desc Get All Vendors
