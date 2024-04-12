@@ -10,6 +10,7 @@ const redisUri = process.env.REDIS_URI;
 const redis = new Redis(redisUri, {
   enableOfflineQueue: false,
   legacyMode: true,
+  connectTimeout: 10000,
 });
 
 //@desc Get All Vendors
